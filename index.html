@@ -3,128 +3,108 @@
 <head>
 <meta charset="UTF-8">
 <title>Love Atlas</title>
-<script src="https://unpkg.com/globe.gl"></script>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
 <style>
 html, body {
   margin: 0;
   padding: 0;
+  height: 100%;
   background: black;
-  overflow: hidden;
   font-family: sans-serif;
 }
 
-#container {
-  position: relative;
-  width: 100vw;
-  height: 100vh;
-}
-
-#globeViz {
-  width: 100%;
+#map {
   height: 100%;
-}
-
-.popup {
-  position: absolute;
-  background: rgba(0,0,0,0.9);
-  color: white;
-  padding: 15px;
-  border-radius: 12px;
-  display: none;
-  width: 250px;
-  z-index: 10;
-  box-shadow: 0 0 20px rgba(255,0,80,0.6);
-}
-
-.popup input,
-.popup textarea,
-.popup button {
   width: 100%;
-  margin-top: 6px;
+}
+
+.popup-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+input, textarea, button {
   padding: 6px;
   border-radius: 6px;
   border: none;
 }
 
-.popup button {
+button {
   background: #ff0055;
   color: white;
 }
 
 .closeBtn {
-  background: #444 !important;
+  background: #444;
 }
 </style>
 </head>
 
 <body>
 
-<div id="container">
-  <div id="globeViz"></div>
-
-  <div class="popup" id="popup">
-    <div id="coords"></div>
-    <input type="date" id="date">
-    <textarea id="note" placeholder="Not yaz"></textarea>
-    <button onclick="saveMemory()">Kaydet</button>
-    <button class="closeBtn" onclick="closePopup()">Kapat</button>
-  </div>
-</div>
+<div id="map"></div>
 
 <script>
 
-const globe = Globe()(document.getElementById('globeViz'))
-  .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
-  .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png')
-  .showAtmosphere(true)
-  .atmosphereColor('#ff0055')
-  .atmosphereAltitude(0.25);
+var map = L.map('map').setView([20, 0], 2);
 
-globe.controls().autoRotate = true;
-globe.controls().autoRotateSpeed = 0.4;
-globe.controls().enablePan = false;
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 18
+}).addTo(map);
 
-let memories = [];
+map.on('click', function(e) {
 
-globe.onGlobeClick((coords, event) => {
-  const popup = document.getElementById("popup");
+  var popupContent = document.createElement("div");
+  popupContent.className = "popup-content";
 
-  document.getElementById("coords").innerText =
-    "Lat: " + coords.lat.toFixed(3) +
-    " | Lng: " + coords.lng.toFixed(3);
+  var coords = document.createElement("div");
+  coords.innerText =
+    "Lat: " + e.latlng.lat.toFixed(3) +
+    " | Lng: " + e.latlng.lng.toFixed(3);
 
-  popup.style.left = event.clientX + "px";
-  popup.style.top = event.clientY + "px";
-  popup.style.display = "block";
+  var dateInput = document.createElement("input");
+  dateInput.type = "date";
 
-  window.currentCoords = coords;
-});
+  var noteInput = document.createElement("textarea");
+  noteInput.placeholder = "Not yaz";
 
-function saveMemory() {
-  const date = document.getElementById("date").value;
-  const note = document.getElementById("note").value;
+  var saveBtn = document.createElement("button");
+  saveBtn.innerText = "Kaydet";
 
-  if(!date || !note) {
-    alert("Tarih ve not gir");
-    return;
-  }
+  saveBtn.onclick = function() {
+    if(!dateInput.value || !noteInput.value){
+      alert("Tarih ve not gir");
+      return;
+    }
 
-  const memory = {
-    lat: window.currentCoords.lat,
-    lng: window.currentCoords.lng,
-    size: 0.6,
-    color: "red"
+    L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
+
+    map.closePopup();
   };
 
-  memories.push(memory);
-  globe.pointsData(memories);
+  var closeBtn = document.createElement("button");
+  closeBtn.innerText = "Kapat";
+  closeBtn.className = "closeBtn";
+  closeBtn.onclick = function(){
+    map.closePopup();
+  };
 
-  closePopup();
-}
+  popupContent.appendChild(coords);
+  popupContent.appendChild(dateInput);
+  popupContent.appendChild(noteInput);
+  popupContent.appendChild(saveBtn);
+  popupContent.appendChild(closeBtn);
 
-function closePopup() {
-  document.getElementById("popup").style.display = "none";
-}
+  L.popup()
+    .setLatLng(e.latlng)
+    .setContent(popupContent)
+    .openOn(map);
+
+});
 
 </script>
 
