@@ -21,17 +21,17 @@ html, body {
 
 .popup {
   position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  max-height: 60%;
   background: rgba(0,0,0,0.95);
   color: white;
   padding: 20px;
-  border-radius: 14px;
-  width: 280px;
+  border-radius: 20px 20px 0 0;
   display: none;
+  overflow-y: auto;
   z-index: 10;
-  box-shadow: 0 0 25px rgba(255,0,80,0.6);
 }
 
 input, textarea, button {
@@ -58,7 +58,7 @@ button {
 <div id="globeViz"></div>
 
 <div class="popup" id="popup">
-  <div id="coords"></div>
+  <div id="locationName"></div>
   <input type="date" id="date">
   <textarea id="note" placeholder="Not yaz"></textarea>
   <button onclick="saveMemory()">Kaydet</button>
@@ -68,23 +68,36 @@ button {
 <script>
 
 const globe = Globe()(document.getElementById('globeViz'))
-  .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
+  .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
   .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png');
 
-globe.controls().autoRotate = true;
-globe.controls().autoRotateSpeed = 0.4;
+globe.controls().autoRotate = false;
 globe.controls().enablePan = false;
 
 let memories = [];
 
 globe.onGlobeClick((coords) => {
-  document.getElementById("coords").innerText =
-    "Lat: " + coords.lat.toFixed(3) +
-    " | Lng: " + coords.lng.toFixed(3);
 
-  document.getElementById("popup").style.display = "block";
+  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lng}`)
+  .then(res => res.json())
+  .then(data => {
 
-  window.currentCoords = coords;
+    let city =
+      data.address.city ||
+      data.address.town ||
+      data.address.village ||
+      data.address.state ||
+      "Bilinmeyen Konum";
+
+    document.getElementById("locationName").innerText =
+      city + " (" +
+      coords.lat.toFixed(2) + ", " +
+      coords.lng.toFixed(2) + ")";
+
+    document.getElementById("popup").style.display = "block";
+    window.currentCoords = coords;
+  });
+
 });
 
 function saveMemory() {
