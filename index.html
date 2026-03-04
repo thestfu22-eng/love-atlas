@@ -12,22 +12,42 @@ html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: radial-gradient(circle at center, #0b0b1a, #000);
+  background: radial-gradient(circle at center, #1a0026, #000);
   font-family: Arial, sans-serif;
 }
+
 canvas { display:block; }
+
+.title {
+  position: fixed;
+  top: 20px;
+  width: 100%;
+  text-align: center;
+  font-size: 26px;
+  color: #ff4da6;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-shadow: 0 0 20px rgba(255,0,120,0.8);
+}
 
 .popup {
   position: fixed;
   bottom: 0;
   left: 0;
   width: 100%;
-  background: linear-gradient(to top, #1a001f, #000);
+  background: linear-gradient(to top, #2b0033, #000);
   color: white;
   padding: 20px;
   border-radius: 20px 20px 0 0;
   display: none;
+  box-shadow: 0 -10px 40px rgba(255,0,120,0.5);
 }
+
+.popup h3 {
+  margin: 0 0 10px 0;
+  color: #ff4da6;
+}
+
 input, textarea, button {
   width: 100%;
   margin-top: 8px;
@@ -35,19 +55,24 @@ input, textarea, button {
   border-radius: 8px;
   border: none;
 }
+
 button {
   background: #ff007a;
   color: white;
+  font-weight: bold;
 }
+
 .closeBtn { background:#333; }
 </style>
 </head>
 <body>
 
+<div class="title">💖 LOVE ATLAS 💖</div>
+
 <div class="popup" id="popup">
-  <div id="coords"></div>
+  <h3 id="coords"></h3>
   <input type="date" id="date">
-  <textarea id="note" placeholder="Anını yaz..."></textarea>
+  <textarea id="note" placeholder="Bu anı anlat..."></textarea>
   <button onclick="saveMemory()">Kaydet</button>
   <button class="closeBtn" onclick="closePopup()">Kapat</button>
 </div>
@@ -62,7 +87,6 @@ const camera = new THREE.PerspectiveCamera(
   0.1,
   1000
 );
-
 camera.position.set(0,0,3);
 
 const renderer = new THREE.WebGLRenderer({ antialias:true });
@@ -91,38 +115,35 @@ scene.add(globe);
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enablePan = false;
 controls.enableDamping = true;
-controls.dampingFactor = 0.05;
-controls.rotateSpeed = 0.5;
-controls.zoomSpeed = 0.6;
 controls.autoRotate = false;
-controls.minDistance = 1.2;   // Daha yakın zoom
+controls.minDistance = 1.2;
 controls.maxDistance = 5;
 
 /* Raycaster */
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 
-/* Kayıtlı yerler */
+/* Kayıt */
 let memories = JSON.parse(localStorage.getItem("loveMemories")) || [];
 
-function addMarker(lat, lng) {
-  const markerGeo = new THREE.SphereGeometry(0.03, 16, 16);
-  const markerMat = new THREE.MeshBasicMaterial({ color:0xff007a });
-  const marker = new THREE.Mesh(markerGeo, markerMat);
+function addHeart(lat, lng) {
+
+  const heartGeo = new THREE.SphereGeometry(0.05, 16, 16);
+  const heartMat = new THREE.MeshBasicMaterial({ color:0xff007a });
+  const heart = new THREE.Mesh(heartGeo, heartMat);
 
   const phi = (90 - lat) * Math.PI / 180;
   const theta = (lng + 180) * Math.PI / 180;
 
-  marker.position.x = -Math.sin(phi) * Math.cos(theta);
-  marker.position.y = Math.cos(phi);
-  marker.position.z = Math.sin(phi) * Math.sin(theta);
+  heart.position.x = -Math.sin(phi) * Math.cos(theta);
+  heart.position.y = Math.cos(phi);
+  heart.position.z = Math.sin(phi) * Math.sin(theta);
 
-  scene.add(marker);
+  scene.add(heart);
 }
 
-memories.forEach(m => addMarker(m.lat, m.lng));
+memories.forEach(m => addHeart(m.lat, m.lng));
 
-/* Tıklama */
 window.addEventListener("click", (event)=>{
 
   mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -142,13 +163,12 @@ window.addEventListener("click", (event)=>{
     window.currentLng = lng;
 
     document.getElementById("coords").innerText =
-      lat.toFixed(2)+", "+lng.toFixed(2);
+      "💖 " + lat.toFixed(2)+", "+lng.toFixed(2);
 
     document.getElementById("popup").style.display="block";
   }
 });
 
-/* Kaydet */
 function saveMemory(){
   const date = document.getElementById("date").value;
   const note = document.getElementById("note").value;
@@ -168,7 +188,7 @@ function saveMemory(){
   memories.push(memory);
   localStorage.setItem("loveMemories", JSON.stringify(memories));
 
-  addMarker(memory.lat, memory.lng);
+  addHeart(memory.lat, memory.lng);
   closePopup();
 }
 
@@ -176,7 +196,6 @@ function closePopup(){
   document.getElementById("popup").style.display="none";
 }
 
-/* Render */
 function animate(){
   requestAnimationFrame(animate);
   controls.update();
@@ -184,7 +203,6 @@ function animate(){
 }
 animate();
 
-/* Resize */
 window.addEventListener("resize", ()=>{
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
