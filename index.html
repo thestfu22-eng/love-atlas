@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Love Atlas</title>
+<script src="https://unpkg.com/globe.gl"></script>
+
+<style>
+body{
+margin:0;
+background:black;
+overflow:hidden;
+font-family:sans-serif;
+}
+
+#login{
+position:fixed;
+width:100%;
+height:100%;
+background:black;
+display:flex;
+flex-direction:column;
+justify-content:center;
+align-items:center;
+color:white;
+z-index:10;
+}
+
+input,button,textarea{
+padding:10px;
+margin:5px;
+border-radius:6px;
+border:none;
+width:250px;
+}
+
+button{
+background:#ff0055;
+color:white;
+}
+
+#globeViz{
+width:100vw;
+height:100vh;
+}
+
+.popup{
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+background:rgba(0,0,0,0.95);
+padding:20px;
+border-radius:10px;
+display:none;
+color:white;
+text-align:center;
+}
+</style>
+</head>
+
+<body>
+
+<div id="login">
+<h1>❤️ Love Atlas</h1>
+<input type="password" id="pass" placeholder="Şifre">
+<button onclick="login()">Giriş</button>
+</div>
+
+<div id="globeViz"></div>
+
+<div class="popup" id="popup">
+<p id="coords"></p>
+<input type="date" id="date">
+<textarea id="note" placeholder="Anı yaz"></textarea>
+<button onclick="save()">Kaydet</button>
+</div>
+
+<script>
+
+const PASSWORD="1234";  // Şifreyi buradan değiştirebilirsin
+
+function login(){
+if(document.getElementById("pass").value===PASSWORD){
+document.getElementById("login").style.display="none";
+}else{
+alert("Yanlış şifre");
+}
+}
+
+const globe=Globe()(document.getElementById("globeViz"))
+.globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
+.backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png');
+
+let data=JSON.parse(localStorage.getItem("memories"))||[];
+globe.pointsData(data);
+
+globe.onGlobeClick((coords)=>{
+window.current=coords;
+document.getElementById("coords").innerText=
+"Lat: "+coords.lat.toFixed(3)+" | Lng: "+coords.lng.toFixed(3);
+document.getElementById("popup").style.display="block";
+});
+
+function save(){
+if(!document.getElementById("date").value || !document.getElementById("note").value){
+alert("Tarih ve not gir");
+return;
+}
+
+let memory={
+lat:window.current.lat,
+lng:window.current.lng,
+size:0.5,
+color:"red",
+date:document.getElementById("date").value,
+note:document.getElementById("note").value
+};
+
+data.push(memory);
+localStorage.setItem("memories",JSON.stringify(data));
+globe.pointsData(data);
+document.getElementById("popup").style.display="none";
+}
+</script>
+
+</body>
+</html>
