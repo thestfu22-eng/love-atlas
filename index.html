@@ -13,11 +13,44 @@ html, body {
   padding: 0;
   overflow: hidden;
   background: radial-gradient(circle at center, #0b0b1a, #000);
+  font-family: Arial, sans-serif;
 }
 canvas { display:block; }
+
+.popup {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: linear-gradient(to top, #1a001f, #000);
+  color: white;
+  padding: 20px;
+  border-radius: 20px 20px 0 0;
+  display: none;
+}
+input, textarea, button {
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+}
+button {
+  background: #ff007a;
+  color: white;
+}
+.closeBtn { background:#333; }
 </style>
 </head>
 <body>
+
+<div class="popup" id="popup">
+  <div id="coords"></div>
+  <input type="date" id="date">
+  <textarea id="note" placeholder="Anını yaz..."></textarea>
+  <button onclick="saveMemory()">Kaydet</button>
+  <button class="closeBtn" onclick="closePopup()">Kapat</button>
+</div>
 
 <script>
 
@@ -30,22 +63,21 @@ const camera = new THREE.PerspectiveCamera(
   1000
 );
 
-camera.position.z = 3;
+camera.position.set(0,0,3);
 
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias:true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
 
-/* IŞIK */
+/* Işık */
 const light = new THREE.AmbientLight(0xffffff, 1.5);
 scene.add(light);
 
-/* Texture - Güvenli CDN */
-const textureLoader = new THREE.TextureLoader();
-textureLoader.crossOrigin = "";
-
-const earthTexture = textureLoader.load(
+/* Texture */
+const loader = new THREE.TextureLoader();
+loader.crossOrigin = "";
+const earthTexture = loader.load(
   "https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg"
 );
 
@@ -58,20 +90,102 @@ scene.add(globe);
 /* Kontroller */
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
 controls.enablePan = false;
+controls.enableDamping = true;
+controls.dampingFactor = 0.05;
+controls.rotateSpeed = 0.5;
+controls.zoomSpeed = 0.6;
 controls.autoRotate = false;
-controls.enableDamping = false;
-controls.minDistance = 1.5;
+controls.minDistance = 1.2;   // Daha yakın zoom
 controls.maxDistance = 5;
 
+/* Raycaster */
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+/* Kayıtlı yerler */
+let memories = JSON.parse(localStorage.getItem("loveMemories")) || [];
+
+function addMarker(lat, lng) {
+  const markerGeo = new THREE.SphereGeometry(0.03, 16, 16);
+  const markerMat = new THREE.MeshBasicMaterial({ color:0xff007a });
+  const marker = new THREE.Mesh(markerGeo, markerMat);
+
+  const phi = (90 - lat) * Math.PI / 180;
+  const theta = (lng + 180) * Math.PI / 180;
+
+  marker.position.x = -Math.sin(phi) * Math.cos(theta);
+  marker.position.y = Math.cos(phi);
+  marker.position.z = Math.sin(phi) * Math.sin(theta);
+
+  scene.add(marker);
+}
+
+memories.forEach(m => addMarker(m.lat, m.lng));
+
+/* Tıklama */
+window.addEventListener("click", (event)=>{
+
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObject(globe);
+
+  if(intersects.length > 0){
+
+    const point = intersects[0].point.clone().normalize();
+
+    const lat = 90 - (Math.acos(point.y) * 180 / Math.PI);
+    const lng = (Math.atan2(point.z, point.x) * 180 / Math.PI);
+
+    window.currentLat = lat;
+    window.currentLng = lng;
+
+    document.getElementById("coords").innerText =
+      lat.toFixed(2)+", "+lng.toFixed(2);
+
+    document.getElementById("popup").style.display="block";
+  }
+});
+
+/* Kaydet */
+function saveMemory(){
+  const date = document.getElementById("date").value;
+  const note = document.getElementById("note").value;
+
+  if(!date || !note){
+    alert("Tarih ve not gir");
+    return;
+  }
+
+  const memory = {
+    lat: window.currentLat,
+    lng: window.currentLng,
+    date,
+    note
+  };
+
+  memories.push(memory);
+  localStorage.setItem("loveMemories", JSON.stringify(memories));
+
+  addMarker(memory.lat, memory.lng);
+  closePopup();
+}
+
+function closePopup(){
+  document.getElementById("popup").style.display="none";
+}
+
 /* Render */
-function animate() {
+function animate(){
   requestAnimationFrame(animate);
-  renderer.render(scene, camera);
+  controls.update();
+  renderer.render(scene,camera);
 }
 animate();
 
 /* Resize */
-window.addEventListener('resize', () => {
+window.addEventListener("resize", ()=>{
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
