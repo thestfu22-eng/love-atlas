@@ -71,33 +71,45 @@ const globe = Globe()(document.getElementById('globeViz'))
   .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
   .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png');
 
-globe.controls().autoRotate = false;
-globe.controls().enablePan = false;
+const controls = globe.controls();
+controls.autoRotate = false;
+controls.enableDamping = false;
+controls.enablePan = false;
+controls.rotateSpeed = 0.6;
+controls.zoomSpeed = 0.8;
 
 let memories = [];
 
-globe.onGlobeClick((coords) => {
+globe.onGlobeClick(async (coords) => {
 
-  fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lng}`)
-  .then(res => res.json())
-  .then(data => {
+  let city = "Konum";
 
-    let city =
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.lat}&lon=${coords.lng}&zoom=10&addressdetails=1`,
+      { headers: { "Accept-Language": "tr" } }
+    );
+
+    const data = await response.json();
+
+    city =
       data.address.city ||
       data.address.town ||
       data.address.village ||
       data.address.state ||
-      "Bilinmeyen Konum";
+      data.display_name.split(",")[0];
 
-    document.getElementById("locationName").innerText =
-      city + " (" +
-      coords.lat.toFixed(2) + ", " +
-      coords.lng.toFixed(2) + ")";
+  } catch (e) {
+    city = "Bilinmeyen Konum";
+  }
 
-    document.getElementById("popup").style.display = "block";
-    window.currentCoords = coords;
-  });
+  document.getElementById("locationName").innerText =
+    city + " (" +
+    coords.lat.toFixed(2) + ", " +
+    coords.lng.toFixed(2) + ")";
 
+  document.getElementById("popup").style.display = "block";
+  window.currentCoords = coords;
 });
 
 function saveMemory() {
@@ -118,7 +130,6 @@ function saveMemory() {
   });
 
   globe.pointsData(memories);
-
   closePopup();
 }
 
