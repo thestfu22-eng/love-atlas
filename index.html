@@ -3,32 +3,41 @@
 <head>
 <meta charset="UTF-8">
 <title>Love Atlas</title>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/globe.gl"></script>
 
 <style>
 html, body {
   margin: 0;
   padding: 0;
-  height: 100%;
+  overflow: hidden;
   background: black;
-  font-family: sans-serif;
+  font-family: Arial, sans-serif;
 }
 
-#map {
-  height: 100%;
-  width: 100%;
+#globeViz {
+  width: 100vw;
+  height: 100vh;
 }
 
-.popup-content {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0,0,0,0.95);
+  color: white;
+  padding: 20px;
+  border-radius: 14px;
+  width: 280px;
+  display: none;
+  z-index: 10;
+  box-shadow: 0 0 25px rgba(255,0,80,0.6);
 }
 
 input, textarea, button {
-  padding: 6px;
+  width: 100%;
+  margin-top: 8px;
+  padding: 8px;
   border-radius: 6px;
   border: none;
 }
@@ -46,65 +55,63 @@ button {
 
 <body>
 
-<div id="map"></div>
+<div id="globeViz"></div>
+
+<div class="popup" id="popup">
+  <div id="coords"></div>
+  <input type="date" id="date">
+  <textarea id="note" placeholder="Not yaz"></textarea>
+  <button onclick="saveMemory()">Kaydet</button>
+  <button class="closeBtn" onclick="closePopup()">Kapat</button>
+</div>
 
 <script>
 
-var map = L.map('map').setView([20, 0], 2);
+const globe = Globe()(document.getElementById('globeViz'))
+  .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
+  .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png');
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 18
-}).addTo(map);
+globe.controls().autoRotate = true;
+globe.controls().autoRotateSpeed = 0.4;
+globe.controls().enablePan = false;
 
-map.on('click', function(e) {
+let memories = [];
 
-  var popupContent = document.createElement("div");
-  popupContent.className = "popup-content";
+globe.onGlobeClick((coords) => {
+  document.getElementById("coords").innerText =
+    "Lat: " + coords.lat.toFixed(3) +
+    " | Lng: " + coords.lng.toFixed(3);
 
-  var coords = document.createElement("div");
-  coords.innerText =
-    "Lat: " + e.latlng.lat.toFixed(3) +
-    " | Lng: " + e.latlng.lng.toFixed(3);
+  document.getElementById("popup").style.display = "block";
 
-  var dateInput = document.createElement("input");
-  dateInput.type = "date";
-
-  var noteInput = document.createElement("textarea");
-  noteInput.placeholder = "Not yaz";
-
-  var saveBtn = document.createElement("button");
-  saveBtn.innerText = "Kaydet";
-
-  saveBtn.onclick = function() {
-    if(!dateInput.value || !noteInput.value){
-      alert("Tarih ve not gir");
-      return;
-    }
-
-    L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
-
-    map.closePopup();
-  };
-
-  var closeBtn = document.createElement("button");
-  closeBtn.innerText = "Kapat";
-  closeBtn.className = "closeBtn";
-  closeBtn.onclick = function(){
-    map.closePopup();
-  };
-
-  popupContent.appendChild(coords);
-  popupContent.appendChild(dateInput);
-  popupContent.appendChild(noteInput);
-  popupContent.appendChild(saveBtn);
-  popupContent.appendChild(closeBtn);
-
-  L.popup()
-    .setLatLng(e.latlng)
-    .setContent(popupContent)
-    .openOn(map);
-
+  window.currentCoords = coords;
 });
+
+function saveMemory() {
+
+  const date = document.getElementById("date").value;
+  const note = document.getElementById("note").value;
+
+  if(!date || !note){
+    alert("Tarih ve not gir");
+    return;
+  }
+
+  memories.push({
+    lat: window.currentCoords.lat,
+    lng: window.currentCoords.lng,
+    size: 0.6,
+    color: "red"
+  });
+
+  globe.pointsData(memories);
+
+  closePopup();
+}
+
+function closePopup() {
+  document.getElementById("popup").style.display = "none";
+}
 
 </script>
 
